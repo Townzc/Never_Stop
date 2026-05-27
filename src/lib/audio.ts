@@ -1,0 +1,104 @@
+import type { PronunciationScore } from '@/types';
+
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+
+export async function startRecording(): Promise<void> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream, {
+    mimeType: 'audio/webm;codecs=opus',
+  });
+  audioChunks = [];
+
+  mediaRecorder.ondataavailable = (event) => {
+    if (event.data.size > 0) {
+      audioChunks.push(event.data);
+    }
+  };
+
+  mediaRecorder.start();
+}
+
+export function stopRecording(): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    if (!mediaRecorder) {
+      reject(new Error('No recording in progress'));
+      return;
+    }
+
+    mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      // Stop all tracks
+      mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
+      mediaRecorder = null;
+      resolve(audioBlob);
+    };
+
+    mediaRecorder.stop();
+  });
+}
+
+export function playAudioBlob(blob: Blob): Promise<void> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    audio.play();
+  });
+}
+
+// Mock pronunciation scoring - in production, this would call a real API
+export function mockPronounceScore(text: string): PronunciationScore {
+  const base = 50 + Math.random() * 40;
+  const accuracy = Math.round(base + Math.random() * 10);
+  const fluency = Math.round(base + Math.random() * 15 - 5);
+  const completeness = Math.round(base + Math.random() * 10);
+  const stressPause = Math.round(base + Math.random() * 20 - 10);
+  const overall = Math.round((accuracy + fluency + completeness + stressPause) / 4);
+
+  const words = text.split(' ');
+  const errorSpans: PronunciationScore['errorSpans'] = [];
+
+  // Randomly flag 0-2 words as having issues
+  const errorCount = Math.floor(Math.random() * 3);
+  const issues = ['vowel', 'consonant', 'stress', 'final_sound'];
+  const hints = ['/ɪ/ not /iː/', 'hold the final sound', 'stress on first syllable', '/θ/ not /s/'];
+
+  for (let i = 0; i < errorCount; i++) {
+    const wordIdx = Math.floor(Math.random() * words.length);
+    const issueIdx = Math.floor(Math.random() * issues.length);
+    errorSpans.push({
+      token: words[wordIdx].toLowerCase().replace(/[^a-z]/g, ''),
+      issue: issues[issueIdx],
+      hint: hints[issueIdx],
+    });
+  }
+
+  return { accuracy, fluency, completeness, stressPause, overall, errorSpans };
+}
+
+// Text-to-speech using Web Speech API
+export function speak(text: string, rate: number = 1.0): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) {
+      reject(new Error('Speech synthesis not supported'));
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = rate;
+
+    utterance.onend = () => resolve();
+    utterance.onerror = () => reject(new Error('Speech synthesis error'));
+
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+export function isRecordingSupported(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+}
