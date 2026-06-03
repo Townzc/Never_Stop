@@ -2,6 +2,21 @@
 
 为 40-65 岁中文母语者打造的生活英语学习网页应用。
 
+## 🚀 在线体验
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FTownzc%2FNever_Stop)
+
+**一键部署步骤：**
+1. 点击上方按钮，用 GitHub 账号登录 Vercel
+2. 点击 "Deploy"，等待 1-2 分钟
+3. 部署完成后会生成一个 `xxx.vercel.app` 的链接，直接分享给别人即可
+
+**或者手动部署：**
+1. 访问 [vercel.com/new](https://vercel.com/new)
+2. 选择 "Import Git Repository"
+3. 输入 `https://github.com/Townzc/Never_Stop`
+4. 点击 Deploy，完成！
+
 ## 功能特色
 
 - **评估测试** - 词汇/标识/听力/口语/发音五维能力评测
