@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import SkillRadar from '@/components/SkillRadar';
 import { readAloudContents, signageQuestions } from '@/lib/mock-data';
-import { mockPronounceScore, speak } from '@/lib/audio';
+import { speak, playCorrectSound, playIncorrectSound, playCompleteSound } from '@/lib/audio';
 import type { AssessmentScores } from '@/types';
 
 type AssessmentStep = 'intro' | 'vocab' | 'signage' | 'listening' | 'speaking' | 'result';
@@ -13,26 +13,31 @@ type AssessmentStep = 'intro' | 'vocab' | 'signage' | 'listening' | 'speaking' |
 const vocabQuestions = [
   {
     word: 'pharmacy',
+    phonetic: '/ˈfɑːrməsi/',
     options: ['医院', '药房', '学校', '银行'],
     correct: '药房',
   },
   {
     word: 'receipt',
+    phonetic: '/rɪˈsiːt/',
     options: ['发票', '收据', '处方', '支票'],
     correct: '收据',
   },
   {
     word: 'boarding',
+    phonetic: '/ˈbɔːrdɪŋ/',
     options: ['登机', '降落', '起飞', '中转'],
     correct: '登机',
   },
   {
     word: 'restroom',
+    phonetic: '/ˈrestruːm/',
     options: ['卧室', '厨房', '洗手间', '客厅'],
     correct: '洗手间',
   },
   {
     word: 'refund',
+    phonetic: '/ˈriːfʌnd/',
     options: ['折扣', '退款', '小费', '押金'],
     correct: '退款',
   },
@@ -86,6 +91,18 @@ export default function AssessmentPage() {
   const signageQs = useMemo(() => signageQuestions.slice(0, 5), []);
   const readAloud = readAloudContents[0];
 
+  // Auto-play word pronunciation when vocab question changes
+  useEffect(() => {
+    if (step === 'vocab' && !vocabAnswered) {
+      const word = vocabQuestions[vocabIdx].word;
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        speak(word, 0.9).catch(() => {});
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [step, vocabIdx, vocabAnswered]);
+
   // Vocab handlers
   const handleVocabAnswer = useCallback(
     (answer: string) => {
@@ -94,6 +111,9 @@ export default function AssessmentPage() {
       setVocabAnswered(true);
       if (answer === vocabQuestions[vocabIdx].correct) {
         setVocabCorrect((c) => c + 1);
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
       }
     },
     [vocabAnswered, vocabIdx]
@@ -107,6 +127,7 @@ export default function AssessmentPage() {
     } else {
       const score = Math.round((vocabCorrect / vocabQuestions.length) * 100);
       setVocabScore(score);
+      playCompleteSound();
       setStep('signage');
     }
   }, [vocabIdx, vocabCorrect]);
@@ -119,6 +140,9 @@ export default function AssessmentPage() {
       setSignageAnswered(true);
       if (answer === signageQs[signageIdx].correctAnswer) {
         setSignageCorrect((c) => c + 1);
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
       }
     },
     [signageAnswered, signageIdx, signageQs]
@@ -132,6 +156,7 @@ export default function AssessmentPage() {
     } else {
       const score = Math.round((signageCorrect / signageQs.length) * 100);
       setSignageScore(score);
+      playCompleteSound();
       setStep('listening');
     }
   }, [signageIdx, signageCorrect, signageQs]);
@@ -154,6 +179,9 @@ export default function AssessmentPage() {
       setListeningAnswered(true);
       if (answer === listeningSentences[listeningIdx].correct) {
         setListeningCorrect((c) => c + 1);
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
       }
     },
     [listeningAnswered, listeningIdx]
@@ -167,6 +195,7 @@ export default function AssessmentPage() {
     } else {
       const score = Math.round((listeningCorrect / listeningSentences.length) * 100);
       setListeningScore(score);
+      playCompleteSound();
       setStep('speaking');
     }
   }, [listeningIdx, listeningCorrect]);
@@ -174,10 +203,10 @@ export default function AssessmentPage() {
   // Speaking handler
   const handleSpeakingComplete = useCallback((score: number) => {
     setSpeakingScore(score);
-    // Mock pronunciation score
     const pScore = 40 + Math.floor(Math.random() * 40);
     setPronunciationScore(pScore);
     setSpeakingDone(true);
+    playCompleteSound();
   }, []);
 
   // Final submit
@@ -197,6 +226,11 @@ export default function AssessmentPage() {
     });
     setStep('result');
   }, [vocabScore, signageScore, listeningScore, speakingScore, pronunciationScore, setAssessment]);
+
+  // Play word audio button
+  const handlePlayWord = useCallback(() => {
+    speak(vocabQuestions[vocabIdx].word, 0.9).catch(() => {});
+  }, [vocabIdx]);
 
   // If already assessed, show result
   if (isAssessed && step === 'intro') {
@@ -259,7 +293,7 @@ export default function AssessmentPage() {
           </p>
           <div className="bg-blue-50 rounded-xl p-4 text-left">
             <p className="text-sm text-blue-800">
-              • 词汇测试：5 道选择题
+              • 词汇测试：5 道选择题（带读音）
               <br />
               • 标识识别：5 道选择题
               <br />
@@ -281,36 +315,79 @@ export default function AssessmentPage() {
       {step === 'vocab' && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-gray-800">词汇测试</h2>
-          <p className="text-gray-500">选出正确的中文意思</p>
+          <p className="text-gray-500">听读音，选出正确的中文意思</p>
 
+          {/* Word card with play button */}
           <div className="bg-blue-50 rounded-xl p-6 text-center">
-            <p className="text-3xl font-bold text-blue-900">
+            <p className="text-3xl font-bold text-blue-900 mb-1">
               {vocabQuestions[vocabIdx].word}
             </p>
+            <p className="text-sm text-blue-600 mb-3">
+              {vocabQuestions[vocabIdx].phonetic}
+            </p>
+            <button
+              onClick={handlePlayWord}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors min-h-[44px]"
+            >
+              🔊 再听一次
+            </button>
           </div>
 
           <div className="space-y-3">
             {vocabQuestions[vocabIdx].options.map((option) => {
               const isSelected = vocabSelected === option;
               const isCorrect = option === vocabQuestions[vocabIdx].correct;
-              let bg = 'bg-white border-gray-200 hover:border-blue-300';
+              let bg = 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50';
               if (vocabAnswered && isSelected) {
-                bg = isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
+                bg = isCorrect
+                  ? 'bg-green-50 border-green-400 ring-2 ring-green-200'
+                  : 'bg-red-50 border-red-400 ring-2 ring-red-200';
               } else if (vocabAnswered && isCorrect) {
-                bg = 'bg-green-50 border-green-200';
+                bg = 'bg-green-50 border-green-300';
               }
               return (
                 <button
                   key={option}
                   onClick={() => handleVocabAnswer(option)}
                   disabled={vocabAnswered}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[48px] ${bg}`}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[56px] ${bg}`}
                 >
-                  <span className="font-medium text-gray-800">{option}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-800 text-lg">{option}</span>
+                    {vocabAnswered && isSelected && (
+                      <span className="text-xl">{isCorrect ? '✅' : '❌'}</span>
+                    )}
+                    {vocabAnswered && !isSelected && isCorrect && (
+                      <span className="text-xl">✅</span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
+
+          {/* Feedback text */}
+          {vocabAnswered && (
+            <div
+              className={`rounded-xl p-4 text-center ${
+                vocabSelected === vocabQuestions[vocabIdx].correct
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
+              <p
+                className={`font-semibold ${
+                  vocabSelected === vocabQuestions[vocabIdx].correct
+                    ? 'text-green-700'
+                    : 'text-red-700'
+                }`}
+              >
+                {vocabSelected === vocabQuestions[vocabIdx].correct
+                  ? '🎉 答对了！太棒了！'
+                  : `😅 正确答案是「${vocabQuestions[vocabIdx].correct}」`}
+              </p>
+            </div>
+          )}
 
           {vocabAnswered && (
             <button
@@ -340,24 +417,53 @@ export default function AssessmentPage() {
             {signageQs[signageIdx].options.map((option) => {
               const isSelected = signageSelected === option;
               const isCorrect = option === signageQs[signageIdx].correctAnswer;
-              let bg = 'bg-white border-gray-200 hover:border-purple-300';
+              let bg = 'bg-white border-gray-200 hover:border-purple-300 hover:bg-purple-50';
               if (signageAnswered && isSelected) {
-                bg = isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
+                bg = isCorrect
+                  ? 'bg-green-50 border-green-400 ring-2 ring-green-200'
+                  : 'bg-red-50 border-red-400 ring-2 ring-red-200';
               } else if (signageAnswered && isCorrect) {
-                bg = 'bg-green-50 border-green-200';
+                bg = 'bg-green-50 border-green-300';
               }
               return (
                 <button
                   key={option}
                   onClick={() => handleSignageAnswer(option)}
                   disabled={signageAnswered}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[48px] ${bg}`}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[56px] ${bg}`}
                 >
-                  <span className="font-medium text-gray-800">{option}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-800 text-lg">{option}</span>
+                    {signageAnswered && isSelected && (
+                      <span className="text-xl">{isCorrect ? '✅' : '❌'}</span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
+
+          {signageAnswered && (
+            <div
+              className={`rounded-xl p-4 text-center ${
+                signageSelected === signageQs[signageIdx].correctAnswer
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
+              <p
+                className={`font-semibold ${
+                  signageSelected === signageQs[signageIdx].correctAnswer
+                    ? 'text-green-700'
+                    : 'text-red-700'
+                }`}
+              >
+                {signageSelected === signageQs[signageIdx].correctAnswer
+                  ? '🎉 答对了！'
+                  : `😅 正确答案是「${signageQs[signageIdx].correctAnswer}」`}
+              </p>
+            </div>
+          )}
 
           {signageAnswered && (
             <button
@@ -388,24 +494,53 @@ export default function AssessmentPage() {
             {listeningSentences[listeningIdx].options.map((option) => {
               const isSelected = listeningSelected === option;
               const isCorrect = option === listeningSentences[listeningIdx].correct;
-              let bg = 'bg-white border-gray-200 hover:border-green-300';
+              let bg = 'bg-white border-gray-200 hover:border-green-300 hover:bg-green-50';
               if (listeningAnswered && isSelected) {
-                bg = isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
+                bg = isCorrect
+                  ? 'bg-green-50 border-green-400 ring-2 ring-green-200'
+                  : 'bg-red-50 border-red-400 ring-2 ring-red-200';
               } else if (listeningAnswered && isCorrect) {
-                bg = 'bg-green-50 border-green-200';
+                bg = 'bg-green-50 border-green-300';
               }
               return (
                 <button
                   key={option}
                   onClick={() => handleListeningAnswer(option)}
                   disabled={listeningAnswered}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[48px] ${bg}`}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all min-h-[56px] ${bg}`}
                 >
-                  <span className="font-medium text-gray-800">{option}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-800 text-lg">{option}</span>
+                    {listeningAnswered && isSelected && (
+                      <span className="text-xl">{isCorrect ? '✅' : '❌'}</span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
+
+          {listeningAnswered && (
+            <div
+              className={`rounded-xl p-4 text-center ${
+                listeningSelected === listeningSentences[listeningIdx].correct
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}
+            >
+              <p
+                className={`font-semibold ${
+                  listeningSelected === listeningSentences[listeningIdx].correct
+                    ? 'text-green-700'
+                    : 'text-red-700'
+                }`}
+              >
+                {listeningSelected === listeningSentences[listeningIdx].correct
+                  ? '🎉 答对了！'
+                  : `😅 正确答案是「${listeningSentences[listeningIdx].correct}」`}
+              </p>
+            </div>
+          )}
 
           {listeningAnswered && (
             <button
@@ -425,6 +560,12 @@ export default function AssessmentPage() {
           <p className="text-gray-500">朗读下面的句子</p>
 
           <div className="bg-blue-50 rounded-xl p-6">
+            <button
+              onClick={() => speak(readAloud.text, 0.9).catch(() => {})}
+              className="mb-3 text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+            >
+              🔊 听示范发音
+            </button>
             <p className="text-xl font-semibold text-blue-900 text-center">
               {readAloud.text}
             </p>

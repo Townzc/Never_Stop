@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import { speak } from '@/lib/audio';
+import { speak, playCorrectSound, playIncorrectSound, playCompleteSound } from '@/lib/audio';
 import type { DialogueScene } from '@/types';
 
 interface DialogueBuilderProps {
@@ -43,6 +43,9 @@ export default function DialogueBuilder({ scene, onComplete }: DialogueBuilderPr
       const option = turn?.options?.find((o) => o.id === optionId);
       if (option?.isCorrect) {
         setCorrectCount((c) => c + 1);
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
       }
     },
     [showFeedback, turn]
@@ -56,6 +59,7 @@ export default function DialogueBuilder({ scene, onComplete }: DialogueBuilderPr
       setShowRescue(false);
     } else {
       setIsFinished(true);
+      playCompleteSound();
       const score = Math.round((correctCount / scene.turns.length) * 100);
       onComplete?.(score);
     }

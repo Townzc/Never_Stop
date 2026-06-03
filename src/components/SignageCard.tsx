@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { playCorrectSound, playIncorrectSound, playCompleteSound } from '@/lib/audio';
 import type { SignageItem, SignageQuestion } from '@/types';
 
 interface SignageCardProps {
@@ -29,6 +30,9 @@ export default function SignageCard({ questions, onComplete }: SignageCardProps)
 
       if (answer === question?.correctAnswer) {
         setCorrectCount((c) => c + 1);
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
       }
     },
     [showFeedback, question]
@@ -42,6 +46,7 @@ export default function SignageCard({ questions, onComplete }: SignageCardProps)
       setShowDetail(false);
     } else {
       setIsFinished(true);
+      playCompleteSound();
       const score = Math.round((correctCount / sessionQuestions.length) * 100);
       onComplete?.(score);
     }

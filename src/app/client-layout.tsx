@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import BottomNav from '@/components/BottomNav';
 import LargeTextToggle from '@/components/LargeTextToggle';
@@ -11,10 +11,28 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const { largeTextMode } = useStore();
+  const [mounted, setMounted] = useState(false);
+
+  // Sync large-text class on mount and on change
+  useEffect(() => {
+    setMounted(true);
+    // Read from localStorage directly to avoid hydration mismatch
+    try {
+      const saved = localStorage.getItem('never_stop_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.largeTextMode) {
+          document.body.classList.add('large-text');
+        }
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
-    document.body.classList.toggle('large-text', largeTextMode);
-  }, [largeTextMode]);
+    if (mounted) {
+      document.body.classList.toggle('large-text', largeTextMode);
+    }
+  }, [largeTextMode, mounted]);
 
   return (
     <div className="min-h-full flex flex-col">

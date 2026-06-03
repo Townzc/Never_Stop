@@ -23,17 +23,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Large text mode */
+/* Large text mode - use !important to override Tailwind */
 body.large-text {
-  font-size: 120%;
+  font-size: 120% !important;
 }
 
-body.large-text .text-xs { font-size: 0.875rem; }
-body.large-text .text-sm { font-size: 1rem; }
-body.large-text .text-base { font-size: 1.25rem; }
-body.large-text .text-lg { font-size: 1.375rem; }
-body.large-text .text-xl { font-size: 1.5rem; }
-body.large-text .text-2xl { font-size: 1.75rem; }
+body.large-text * {
+  line-height: 1.6 !important;
+}
+
+body.large-text .text-xs { font-size: 0.9375rem !important; }
+body.large-text .text-sm { font-size: 1.0625rem !important; }
+body.large-text .text-base { font-size: 1.25rem !important; }
+body.large-text .text-lg { font-size: 1.375rem !important; }
+body.large-text .text-xl { font-size: 1.5rem !important; }
+body.large-text .text-2xl { font-size: 1.75rem !important; }
+body.large-text .text-3xl { font-size: 2rem !important; }
+body.large-text button { font-size: 1.1rem !important; }
 
 /* Safe area for mobile */
 .safe-area-bottom {
