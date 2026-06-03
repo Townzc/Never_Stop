@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import BottomNav from '@/components/BottomNav';
 import LargeTextToggle from '@/components/LargeTextToggle';
@@ -11,8 +12,12 @@ export default function ClientLayout({
 }) {
   const { largeTextMode } = useStore();
 
+  useEffect(() => {
+    document.body.classList.toggle('large-text', largeTextMode);
+  }, [largeTextMode]);
+
   return (
-    <div className={`min-h-full flex flex-col ${largeTextMode ? 'large-text' : ''}`}>
+    <div className="min-h-full flex flex-col">
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
