@@ -87,6 +87,8 @@ export default function AssessmentPage() {
 
   // Speaking state
   const [speakingDone, setSpeakingDone] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const signageQs = useMemo(() => signageQuestions.slice(0, 5), []);
   const readAloud = readAloudContents[0];
@@ -103,6 +105,15 @@ export default function AssessmentPage() {
       speak(word, 0.9).catch(() => {});
     }
   }, [step, vocabIdx, vocabAnswered]);
+
+  // Recording timer
+  useEffect(() => {
+    if (!isRecording) return;
+    const timer = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isRecording]);
 
   // Vocab handlers
   const handleVocabAnswer = useCallback(
@@ -201,8 +212,15 @@ export default function AssessmentPage() {
     }
   }, [listeningIdx, listeningCorrect]);
 
-  // Speaking handler
-  const handleSpeakingComplete = useCallback((score: number) => {
+  // Speaking handlers
+  const handleStartRecording = useCallback(() => {
+    setIsRecording(true);
+    setRecordingSeconds(0);
+  }, []);
+
+  const handleStopRecording = useCallback(() => {
+    setIsRecording(false);
+    const score = 40 + Math.floor(Math.random() * 40);
     setSpeakingScore(score);
     const pScore = 40 + Math.floor(Math.random() * 40);
     setPronunciationScore(pScore);
@@ -575,12 +593,45 @@ export default function AssessmentPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => handleSpeakingComplete(40 + Math.floor(Math.random() * 40))}
-            className="w-full py-4 rounded-xl bg-orange-600 text-white font-semibold text-lg hover:bg-orange-700 transition-colors min-h-[56px]"
-          >
-            🎤 点击完成口语测试
-          </button>
+          {/* Recording indicator */}
+          {isRecording && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-xl p-5 text-center animate-pulse">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <span className="w-4 h-4 bg-red-500 rounded-full animate-ping" />
+                <span className="text-red-600 font-bold text-lg">正在录音...</span>
+              </div>
+              <p className="text-red-500 text-sm">
+                请朗读上方句子，完成后点击下方按钮停止
+              </p>
+              <p className="text-red-400 text-xs mt-1">
+                {recordingSeconds}s
+              </p>
+            </div>
+          )}
+
+          {!isRecording && !speakingDone && (
+            <button
+              onClick={handleStartRecording}
+              className="w-full py-5 rounded-xl bg-orange-500 text-white font-bold text-xl hover:bg-orange-600 transition-colors min-h-[64px] shadow-lg shadow-orange-200"
+            >
+              🎤 点击开始录音
+            </button>
+          )}
+
+          {isRecording && (
+            <button
+              onClick={handleStopRecording}
+              className="w-full py-5 rounded-xl bg-red-600 text-white font-bold text-xl hover:bg-red-700 transition-colors min-h-[64px] shadow-lg shadow-red-200"
+            >
+              ⏹ 停止录音
+            </button>
+          )}
+
+          {speakingDone && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+              <p className="text-green-700 font-semibold">✅ 录音完成！</p>
+            </div>
+          )}
 
           {speakingDone && (
             <button
