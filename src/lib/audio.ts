@@ -88,6 +88,9 @@ export function speak(text: string, rate: number = 1.0): Promise<void> {
       return;
     }
 
+    // Chrome bug workaround: cancel any pending speech first
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = rate;
@@ -97,6 +100,18 @@ export function speak(text: string, rate: number = 1.0): Promise<void> {
 
     window.speechSynthesis.speak(utterance);
   });
+}
+
+// Pre-warm SpeechSynthesis engine to eliminate first-call delay
+export function warmUpSpeech(): void {
+  if (!window.speechSynthesis) return;
+  // Load voices
+  window.speechSynthesis.getVoices();
+  // Silent utterance to initialize the engine
+  const u = new SpeechSynthesisUtterance('');
+  u.volume = 0;
+  u.lang = 'en-US';
+  window.speechSynthesis.speak(u);
 }
 
 export function isRecordingSupported(): boolean {

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import SkillRadar from '@/components/SkillRadar';
 import { readAloudContents, signageQuestions } from '@/lib/mock-data';
-import { speak, playCorrectSound, playIncorrectSound, playCompleteSound } from '@/lib/audio';
+import { speak, playCorrectSound, playIncorrectSound, playCompleteSound, warmUpSpeech } from '@/lib/audio';
 import type { AssessmentScores } from '@/types';
 
 type AssessmentStep = 'intro' | 'vocab' | 'signage' | 'listening' | 'speaking' | 'result';
@@ -91,15 +91,16 @@ export default function AssessmentPage() {
   const signageQs = useMemo(() => signageQuestions.slice(0, 5), []);
   const readAloud = readAloudContents[0];
 
-  // Auto-play word pronunciation when vocab question changes
+  // Pre-warm SpeechSynthesis on mount
+  useEffect(() => {
+    warmUpSpeech();
+  }, []);
+
+  // Auto-play word pronunciation immediately when vocab question changes
   useEffect(() => {
     if (step === 'vocab' && !vocabAnswered) {
       const word = vocabQuestions[vocabIdx].word;
-      // Small delay to ensure UI is ready
-      const timer = setTimeout(() => {
-        speak(word, 0.9).catch(() => {});
-      }, 300);
-      return () => clearTimeout(timer);
+      speak(word, 0.9).catch(() => {});
     }
   }, [step, vocabIdx, vocabAnswered]);
 
