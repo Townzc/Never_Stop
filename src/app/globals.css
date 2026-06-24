@@ -23,7 +23,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Large text mode - use !important to override Tailwind */
+/* Large text mode - use high specificity + !important to override Tailwind v4 utilities */
 body.large-text {
   font-size: 120% !important;
 }
@@ -32,14 +32,23 @@ body.large-text * {
   line-height: 1.6 !important;
 }
 
-body.large-text .text-xs { font-size: 0.9375rem !important; }
-body.large-text .text-sm { font-size: 1.0625rem !important; }
-body.large-text .text-base { font-size: 1.25rem !important; }
-body.large-text .text-lg { font-size: 1.375rem !important; }
-body.large-text .text-xl { font-size: 1.5rem !important; }
-body.large-text .text-2xl { font-size: 1.75rem !important; }
-body.large-text .text-3xl { font-size: 2rem !important; }
-body.large-text button { font-size: 1.1rem !important; }
+/* Doubled class selector for higher specificity than Tailwind utilities */
+body.large-text.large-text .text-xs { font-size: 0.9375rem !important; }
+body.large-text.large-text .text-sm { font-size: 1.0625rem !important; }
+body.large-text.large-text .text-base { font-size: 1.25rem !important; }
+body.large-text.large-text .text-lg { font-size: 1.375rem !important; }
+body.large-text.large-text .text-xl { font-size: 1.5rem !important; }
+body.large-text.large-text .text-2xl { font-size: 1.75rem !important; }
+body.large-text.large-text .text-3xl { font-size: 2rem !important; }
+body.large-text.large-text .text-4xl { font-size: 2.5rem !important; }
+body.large-text.large-text .text-5xl { font-size: 3rem !important; }
+body.large-text.large-text button { font-size: 1.1rem !important; }
+body.large-text.large-text p,
+body.large-text.large-text span,
+body.large-text.large-text label,
+body.large-text.large-text a {
+  font-size: 1.1rem !important;
+}
 
 /* Safe area for mobile */
 .safe-area-bottom {

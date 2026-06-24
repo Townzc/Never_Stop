@@ -106,16 +106,20 @@ export function isRecordingSupported(): boolean {
 // Audio feedback sounds using Web Audio API
 let audioCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext {
+async function getAudioContext(): Promise<AudioContext> {
   if (!audioCtx) {
     audioCtx = new AudioContext();
+  }
+  // Resume suspended context (browser autoplay policy)
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
   }
   return audioCtx;
 }
 
-export function playCorrectSound(): void {
+export async function playCorrectSound(): Promise<void> {
   try {
-    const ctx = getAudioContext();
+    const ctx = await getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -131,9 +135,9 @@ export function playCorrectSound(): void {
   } catch {}
 }
 
-export function playIncorrectSound(): void {
+export async function playIncorrectSound(): Promise<void> {
   try {
-    const ctx = getAudioContext();
+    const ctx = await getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -148,9 +152,9 @@ export function playIncorrectSound(): void {
   } catch {}
 }
 
-export function playCompleteSound(): void {
+export async function playCompleteSound(): Promise<void> {
   try {
-    const ctx = getAudioContext();
+    const ctx = await getAudioContext();
     const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
