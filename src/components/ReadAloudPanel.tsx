@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useStore } from '@/lib/store';
-import { startRecording, stopRecording, mockPronounceScore, speak, isRecordingSupported } from '@/lib/audio';
+import { startRecording, stopRecording, playAudioBlob, mockPronounceScore, speak, isRecordingSupported } from '@/lib/audio';
 import PlaybackSpeed from './PlaybackSpeed';
 import type { ReadAloudContent, PronunciationScore } from '@/types';
 
@@ -15,6 +15,8 @@ export default function ReadAloudPanel({ content, onComplete }: ReadAloudPanelPr
   const { playbackSpeed } = useStore();
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayingMyRecording, setIsPlayingMyRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [score, setScore] = useState<PronunciationScore | null>(null);
   const [step, setStep] = useState<'listen' | 'record' | 'review'>('listen');
 
@@ -32,7 +34,8 @@ export default function ReadAloudPanel({ content, onComplete }: ReadAloudPanelPr
   const handleRecord = useCallback(async () => {
     if (isRecording) {
       setIsRecording(false);
-      await stopRecording();
+      const blob = await stopRecording();
+      setRecordedBlob(blob);
       // Mock scoring
       const result = mockPronounceScore(content.text);
       setScore(result);
@@ -49,8 +52,30 @@ export default function ReadAloudPanel({ content, onComplete }: ReadAloudPanelPr
 
   const handleRetry = useCallback(() => {
     setScore(null);
+    setRecordedBlob(null);
     setStep('record');
   }, []);
+
+  const handlePlayMyRecording = useCallback(async () => {
+    if (!recordedBlob) return;
+    setIsPlayingMyRecording(true);
+    try {
+      await playAudioBlob(recordedBlob);
+    } catch {
+      // fallback
+    }
+    setIsPlayingMyRecording(false);
+  }, [recordedBlob]);
+
+  const handlePlayExample = useCallback(async () => {
+    setIsPlaying(true);
+    try {
+      await speak(content.text, playbackSpeed);
+    } catch {
+      // fallback
+    }
+    setIsPlaying(false);
+  }, [content.text, playbackSpeed]);
 
   const handleComplete = useCallback(() => {
     onComplete?.(score?.overall || 0);
@@ -199,6 +224,27 @@ export default function ReadAloudPanel({ content, onComplete }: ReadAloudPanelPr
               </div>
             </div>
           )}
+
+          {/* Compare playback */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-semibold text-gray-700">🎧 对比回放</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handlePlayMyRecording}
+                disabled={isPlayingMyRecording || !recordedBlob}
+                className="py-3 rounded-xl bg-green-100 text-green-700 font-semibold hover:bg-green-200 transition-colors disabled:opacity-50 min-h-[48px]"
+              >
+                {isPlayingMyRecording ? '🔊 播放中...' : '🎤 我的录音'}
+              </button>
+              <button
+                onClick={handlePlayExample}
+                disabled={isPlaying}
+                className="py-3 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition-colors disabled:opacity-50 min-h-[48px]"
+              >
+                {isPlaying ? '🔊 播放中...' : '🔊 示范发音'}
+              </button>
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3">
